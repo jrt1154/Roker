@@ -1,10 +1,21 @@
 # Roker - Terminal meteorologist
-
+# Writes text forecast based on current IP location
+#-------------------------
 require 'date'
 require 'IPinfo'
 require 'json'
 require 'rest-client'
-
+#-------------------------
+# Requires IPInfo.io and Dark Sky API keys
+# If keys stored in external file (credentials.rb), then load
+if File.file?("credentials.rb")
+	require_relative 'credentials'
+else
+	# Else add manually
+	Key_ipinfo = ""
+	Key_darksky = ""
+end
+#-------------------------
 class Location
 	attr_reader :city, :country, :countryISO, :latitude, :longitude
 	def initialize(details)
@@ -15,20 +26,20 @@ class Location
 		@longitude = details.longitude
 	end
 end
-
-def getLocation()
-	access_token = ''
+#-------------------------
+# Returns Location object based on current IP address
+def getLocation(access_token)
 	handler = IPinfo::create(access_token)
 	loc = Location.new(handler.details())
 	
 	return loc
 end
 
-def forecast(type="now")
+def forecast(type="now",ipinfotoken,darkskytoken)
 	# Get current location
-	location = getLocation()
+	location = getLocation(ipinfotoken)
 	
-	data = getForecast(location.latitude,location.longitude)
+	data = getForecast(location.latitude,location.longitude,darkskytoken)
 	
 	# Parse into variables
 	time = Time.at(data["currently"]["time"]).to_datetime
@@ -52,19 +63,19 @@ def forecast(type="now")
 	puts output
 end
 
-def getForecast(lat,lon)
+# Returns forecast data from Dark Sky API
+def getForecast(lat,lon,darkskyAPIKey)
 	# Configure Forecast.io API
-	forecastioAPIKey = ""
-	forecastioURL = "https://api.darksky.net/forecast/#{forecastioAPIKey}/#{lat},#{lon}?exclude=hourly,daily,flags&units=si"
+	darkskyURL = "https://api.darksky.net/forecast/#{darkskyAPIKey}/#{lat},#{lon}?exclude=hourly,daily,flags&units=si"
 	
 	# Make API call
-	forecastioResponse = RestClient.get(forecastioURL)
-	forecastioData = JSON.parse(forecastioResponse)
+	darkskyResponse = RestClient.get(darkskyURL)
+	darkskyData = JSON.parse(darkskyResponse)
 
 	# DEBUG: JSON output
-	# puts JSON.pretty_generate(forecastioData)
+	# puts JSON.pretty_generate(darkskyData)
 	
-	return forecastioData
+	return darkskyData
 end
-
-forecast()
+#-------------------------
+forecast("now",Key_ipinfo,Key_darksky)
